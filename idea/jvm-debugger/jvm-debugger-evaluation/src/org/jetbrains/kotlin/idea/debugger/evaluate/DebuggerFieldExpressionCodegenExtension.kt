@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.load.java.descriptors.JavaClassDescriptor
 import org.jetbrains.kotlin.load.java.descriptors.JavaPropertyDescriptor
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
+import org.jetbrains.kotlin.resolve.lazy.descriptors.LazyClassDescriptor
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
 import org.jetbrains.kotlin.synthetic.JavaSyntheticPropertiesScope
 
@@ -21,11 +22,15 @@ class DebuggerFieldExpressionCodegenExtension : ExpressionCodegenExtension {
         val propertyDescriptor = resolvedCall.resultingDescriptor as? PropertyDescriptor ?: return null
 
         if (propertyDescriptor is DebuggerFieldPropertyDescriptor) {
+            val isStatic = with(propertyDescriptor.containingDeclaration) {
+                this is LazyClassDescriptor && isCompanionObject
+                // companion object's properties are static fields in containing class
+            }
             return StackValue.StackValueWithSimpleReceiver.field(
                 c.typeMapper.mapType(propertyDescriptor.type),
                 propertyDescriptor.ownerType(c.codegen.state),
                 propertyDescriptor.fieldName,
-                false,
+                isStatic,
                 receiver
             )
         }

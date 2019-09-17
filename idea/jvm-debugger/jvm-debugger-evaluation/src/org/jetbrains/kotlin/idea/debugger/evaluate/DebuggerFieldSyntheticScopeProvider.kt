@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
 import org.jetbrains.kotlin.platform.isCommon
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.lazy.descriptors.LazyClassDescriptor
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
 import org.jetbrains.kotlin.resolve.scopes.SyntheticScope
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
@@ -127,7 +128,10 @@ class DebuggerFieldSyntheticScope(val javaSyntheticPropertiesScope: JavaSyntheti
             val sourceElement = propertyDescriptor.source
 
             consumer[name] = createSyntheticPropertyDescriptor(clazz, type, name.asString(), "Backing field", sourceElement) { state ->
-                state.typeMapper.mapType(clazz.defaultType)
+                val mapType = if (clazz is LazyClassDescriptor && clazz.isCompanionObject)
+                    (clazz.containingDeclaration as ClassDescriptor).defaultType
+                else clazz.defaultType // companion object's properties are static fields in containing class
+                state.typeMapper.mapType(mapType)
             }
         }
     }
