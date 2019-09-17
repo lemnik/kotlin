@@ -82,8 +82,7 @@ internal fun captureFromArguments(
         val newProjection = capturedArguments[index]
 
         if (oldProjection.projectionKind == Variance.INVARIANT) continue
-        val capturedTypeSupertypes = mutableListOf<UnwrappedType>()
-        type.constructor.parameters[index].upperBounds.mapTo(capturedTypeSupertypes) {
+        val capturedTypeSupertypes = type.constructor.parameters[index].upperBounds.mapTo(mutableListOf()) {
             substitutor.safeSubstitute(it, Variance.INVARIANT).unwrap()
         }
 
