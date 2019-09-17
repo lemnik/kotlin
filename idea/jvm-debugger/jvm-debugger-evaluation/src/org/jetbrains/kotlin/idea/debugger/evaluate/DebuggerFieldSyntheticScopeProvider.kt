@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.PropertyDescriptorImpl
 import org.jetbrains.kotlin.descriptors.impl.PropertyGetterDescriptorImpl
+import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.project.platform
 import org.jetbrains.kotlin.incremental.KotlinLookupLocation
 import org.jetbrains.kotlin.incremental.components.LookupLocation
@@ -28,9 +29,11 @@ import org.jetbrains.kotlin.resolve.DescriptorFactory
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
 import org.jetbrains.kotlin.platform.isCommon
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
 import org.jetbrains.kotlin.resolve.scopes.SyntheticScope
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
+import org.jetbrains.kotlin.resolve.source.KotlinSourceElement
 import org.jetbrains.kotlin.synthetic.JavaSyntheticPropertiesScope
 import org.jetbrains.kotlin.synthetic.SyntheticScopeProviderExtension
 import org.jetbrains.kotlin.types.KotlinType
@@ -117,7 +120,8 @@ class DebuggerFieldSyntheticScope(val javaSyntheticPropertiesScope: JavaSyntheti
         for (descriptor in clazz.unsubstitutedMemberScope.getDescriptorsFiltered(DescriptorKindFilter.VARIABLES)) {
             val propertyDescriptor = descriptor as? PropertyDescriptor ?: continue
             val name = propertyDescriptor.name
-            if (propertyDescriptor.backingField == null || name in consumer) continue
+            if (!propertyDescriptor.hasBackingField() || name in consumer) continue
+            // do not add if the backing field is not actually created by backend (KT-33460)
 
             val type = propertyDescriptor.type
             val sourceElement = propertyDescriptor.source
@@ -126,6 +130,10 @@ class DebuggerFieldSyntheticScope(val javaSyntheticPropertiesScope: JavaSyntheti
                 state.typeMapper.mapType(clazz.defaultType)
             }
         }
+    }
+
+    private fun PropertyDescriptor.hasBackingField(): Boolean {
+        return (source as? KotlinSourceElement)?.psi?.analyze()?.get(BindingContext.BACKING_FIELD_REQUIRED, this) == true
     }
 
     private fun collectJavaProperties(
