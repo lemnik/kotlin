@@ -21,10 +21,9 @@ import com.intellij.debugger.ui.impl.watch.StackFrameDescriptorImpl
 import com.intellij.debugger.ui.tree.render.DescriptorLabelListener
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.IconLoader
+import com.intellij.util.ui.EmptyIcon
 import com.sun.jdi.ClassType
 import com.sun.jdi.ObjectReference
-import org.jetbrains.kotlin.idea.IconExtensionChooser
 import org.jetbrains.kotlin.idea.debugger.evaluate.ExecutionContext
 import javax.swing.Icon
 
@@ -175,7 +174,7 @@ class SuspendStackFrameDescriptor(
     }
 
     override fun getIcon(): Icon {
-        return IconLoader.getIcon("org/jetbrains/kotlin/idea/icons/suspendCall.${IconExtensionChooser.iconExtension()}")
+        return EmptyIcon.create(6)
     }
 }
 
