@@ -83,11 +83,11 @@ internal fun captureFromArguments(
 
         if (oldProjection.projectionKind == Variance.INVARIANT) continue
         val capturedTypeSupertypes = type.constructor.parameters[index].upperBounds.mapTo(mutableListOf()) {
-            substitutor.safeSubstitute(it, Variance.INVARIANT).unwrap()
+            NewKotlinTypeChecker.Default.transformToNewType(substitutor.safeSubstitute(it, Variance.INVARIANT).unwrap())
         }
 
         if (!oldProjection.isStarProjection && oldProjection.projectionKind == Variance.OUT_VARIANCE) {
-            capturedTypeSupertypes += oldProjection.type.unwrap()
+            capturedTypeSupertypes += NewKotlinTypeChecker.Default.transformToNewType(oldProjection.type.unwrap())
         }
 
         val capturedType = newProjection.type as NewCapturedType
