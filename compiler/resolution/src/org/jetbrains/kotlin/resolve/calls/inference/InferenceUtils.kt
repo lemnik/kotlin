@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.resolve.calls.inference
 
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
+import org.jetbrains.kotlin.resolve.calls.inference.components.EmptySubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
 import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
@@ -34,6 +35,8 @@ fun ConstraintStorage.buildCurrentSubstitutor(
 
 fun ConstraintStorage.buildAbstractResultingSubstitutor(context: TypeSystemInferenceExtensionContext): TypeSubstitutorMarker =
     with(context) {
+        if (allTypeVariables.isEmpty()) return EmptySubstitutor
+
         val currentSubstitutorMap = fixedTypeVariables.entries.associate {
             it.key to it.value
         }
