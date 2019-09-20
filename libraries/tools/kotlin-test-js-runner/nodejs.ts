@@ -15,6 +15,11 @@ const untypedArgs = parser.parse(processArgs);
 const realConsoleLog = console.log;
 const teamCity = new TeamCityMessagesFlow(null, (payload) => realConsoleLog(payload));
 
+console.error = () => {
+};
+console.warn = () => {
+};
+
 const onIgnoredTestSuites = (untypedArgs.ignoredTestSuites
     || IgnoredTestSuitesReporting.reportAllInnerTestsAsIgnored) as IgnoredTestSuitesReporting;
 
