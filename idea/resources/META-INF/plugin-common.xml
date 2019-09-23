@@ -163,6 +163,9 @@
       <add-to-group group-id="Internal" anchor="last"/>
     </group>
 
+    <action id="JumperDebugger" class="org.jetbrains.kotlin.idea.actions.internal.jumperDebugger.JumperDebuggerAction"
+            text="JumperDebugger"/>
+
     <action id="KotlinThrowException" class="org.jetbrains.kotlin.idea.actions.internal.KotlinThrowExceptionAction"
             text="Drop an error from Kotlin plugin"/>
 
