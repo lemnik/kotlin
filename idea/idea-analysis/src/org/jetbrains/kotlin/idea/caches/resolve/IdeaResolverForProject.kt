@@ -43,7 +43,6 @@ class IdeaResolverForProject(
     private val modules: Collection<IdeaModuleInfo>,
     private val syntheticFilesByModule: Map<IdeaModuleInfo, Collection<KtFile>>,
     delegateResolver: ResolverForProject<IdeaModuleInfo>,
-    private val builtInsCache: BuiltInsCache,
     fallbackModificationTracker: ModificationTracker? = null,
     private val isReleaseCoroutines: Boolean? = null,
     // TODO(dsavvinov): this is needed only for non-composite analysis, extract separate resolver implementation instead
@@ -56,6 +55,8 @@ class IdeaResolverForProject(
     delegateResolver,
     ServiceManager.getService(projectContext.project, IdePackageOracleFactory::class.java)
 ) {
+    private val builtInsCache: BuiltInsCache = (delegateResolver as? IdeaResolverForProject)?.builtInsCache ?: BuiltInsCache(projectContext)
+
     override fun sdkDependency(module: IdeaModuleInfo): IdeaModuleInfo? {
         if (projectContext.project.useCompositeAnalysis) {
             require(constantSdkDependencyIfAny == null) { "Shouldn't pass SDK dependency manually for composite analysis mode" }
@@ -66,11 +67,7 @@ class IdeaResolverForProject(
     override fun modulesContent(module: IdeaModuleInfo): ModuleContent<IdeaModuleInfo> =
         ModuleContent(module, syntheticFilesByModule[module] ?: emptyList(), module.contentScope())
 
-    override fun builtInsForModule(module: IdeaModuleInfo): KotlinBuiltIns {
-        require(module in modules)
-        val key = module.platform.idePlatformKind.resolution.getKeyForBuiltIns(module)
-        return builtInsCache.getOrPut(key) { throw IllegalStateException("Can't find builtIns by key $key for module $module") }
-    }
+    override fun builtInsForModule(module: IdeaModuleInfo): KotlinBuiltIns = builtInsCache.getOrCreateIfNeeded(module)
 
     override fun createResolverForModule(descriptor: ModuleDescriptor, moduleInfo: IdeaModuleInfo): ResolverForModule {
         val moduleContent = ModuleContent(moduleInfo, syntheticFilesByModule[moduleInfo] ?: listOf(), moduleInfo.contentScope())
@@ -121,4 +118,36 @@ class IdeaResolverForProject(
             )
         }
     }
+
+    // Important: ProjectContext must be from SDK to be sure that we won't run into deadlocks
+    inner class BuiltInsCache(private val projectContextForBuiltIns: ProjectContext) {
+        private val cache = mutableMapOf<BuiltInsCacheKey, KotlinBuiltIns>()
+
+        fun getOrCreateIfNeeded(module: IdeaModuleInfo): KotlinBuiltIns = projectContextForBuiltIns.storageManager.compute {
+            val key = module.platform.idePlatformKind.resolution.getKeyForBuiltIns(module)
+            val cachedBuiltIns = cache[key]
+            if (cachedBuiltIns != null) return@compute cachedBuiltIns
+
+            // Note #1: we can't use .getOrPut, because we have to put builtIns into map *before* initialization
+            // Note #2: it's OK to put not-initialized built-ins into public map, because access to [cache] is guarded by storageManager.lock
+            val newBuiltIns = module.platform.idePlatformKind.resolution.createBuiltIns(module, projectContextForBuiltIns)
+            cache[key] = newBuiltIns
+
+            if (newBuiltIns is JvmBuiltIns) {
+                // SDK should be present, otherwise we wouldn't have created JvmBuiltIns in createBuiltIns
+                val sdk = module.findSdkAcrossDependencies()!!
+                val sdkDescriptor = descriptorForModule(sdk)
+
+                val isAdditionalBuiltInsFeaturesSupported = module.supportsAdditionalBuiltInsMembers(projectContextForBuiltIns.project)
+
+                newBuiltIns.initialize(sdkDescriptor, isAdditionalBuiltInsFeaturesSupported)
+            }
+
+            return@compute newBuiltIns
+        }
+    }
+}
+
+interface BuiltInsCacheKey {
+    object DefaultBuiltInsKey : BuiltInsCacheKey
 }
