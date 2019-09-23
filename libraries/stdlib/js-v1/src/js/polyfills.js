@@ -251,7 +251,7 @@ if (typeof ArrayBuffer.isView === "undefined") {
 
 if (typeof Array.prototype.fill === "undefined") {
     // Polyfill from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill#Polyfill
-    Array.prototype.fill = function() {
+    Array.prototype.fill = function(value) {
       // Steps 1-2.
       if (this == null) {
         throw new TypeError('this is null or not defined');
