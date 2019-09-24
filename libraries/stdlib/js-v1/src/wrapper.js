@@ -2,7 +2,7 @@
     if (typeof define === 'function' && define.amd) {
         define('kotlin', ['exports'], factory);
     }
-    else if (typeof exports === 'object') {
+    else if (typeof module === 'object' && typeof module.exports === 'object') {
         factory(module.exports);
     }
     else {
